@@ -626,3 +626,94 @@ FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_
     with open(json_path, 'r') as f:
 FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_kp/test1.json'
 
+2025-06-16 21:17:09,030 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}/ball")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 61, in ball_detect
+    court=read_json(cd_json_path)['court_info']
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\utils.py", line 27, in read_json
+    with open(json_path, 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_kp/test1.json'
+
+2025-06-16 21:18:49,875 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}/ball")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 61, in ball_detect
+    court=read_json(cd_json_path)['court_info']
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\utils.py", line 27, in read_json
+    with open(json_path, 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_kp/test2.json'
+
+2025-06-16 21:25:26,253 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}/ball")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 61, in ball_detect
+    court=read_json(cd_json_path)['court_info']
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\utils.py", line 27, in read_json
+    with open(json_path, 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_kp/test1.json'
+
+2025-06-17 10:45:32,168 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}/ball")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 61, in ball_detect
+    court=read_json(cd_json_path)['court_info']
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\utils.py", line 27, in read_json
+    with open(json_path, 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_kp/test1.json'
+
+2025-06-17 10:48:06,057 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}/ball")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 61, in ball_detect
+    court=read_json(cd_json_path)['court_info']
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\utils.py", line 27, in read_json
+    with open(json_path, 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'res/ball/courts\\court_kp/test2.json'
+
+2025-06-17 11:09:22,655 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}/ball")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 61, in ball_detect
+    court=read_json(cd_json_path)['court_info']
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\utils.py", line 27, in read_json
+    with open(json_path, 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'res/ball\\court_kp/test1.json'
+
+2025-06-17 19:44:41,052 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 203, in ball_detect
+    smooth(json_path, court,dd_save_dir)
+NameError: name 'smooth' is not defined
+
+2025-06-17 19:44:52,251 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 203, in ball_detect
+    smooth(json_path, court,dd_save_dir)
+NameError: name 'smooth' is not defined
+
+2025-06-17 19:46:56,349 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 203, in ball_detect
+    smooth(json_path, court,dd_save_dir)
+NameError: name 'smooth' is not defined
+
+2025-06-17 20:04:14,504 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 203, in ball_detect
+    smooth(json_path, court,dd_save_dir)
+NameError: name 'smooth' is not defined
+
+2025-06-17 20:04:25,130 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 203, in ball_detect
+    smooth(json_path, court,dd_save_dir)
+NameError: name 'smooth' is not defined
+
+2025-06-17 20:06:26,074 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 203, in ball_detect
+    smooth(json_path, court,dd_save_dir)
+NameError: name 'smooth' is not defined
+
+2025-06-17 20:24:48,334 - ERROR - Traceback (most recent call last):
+  File "D:\CS\visual perception\BadmintonAnalysis\main.py", line 220, in <module>
+    ball_detect(res_video_path, f"{result_path}")
+  File "D:\CS\visual perception\BadmintonAnalysis\src\tools\BallDetect.py", line 67, in ball_detect
+    model = TrackNet().to(device)
+NameError: name 'TrackNet' is not defined
+

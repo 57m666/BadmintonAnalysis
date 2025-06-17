@@ -8,12 +8,11 @@ import numpy as np
 from pathlib import Path
 from argparse import ArgumentParser
 
-sys.path.append("src/models")
 sys.path.append("src/tools")
+sys.path.append("src/models")
 
 from TrackNet import TrackNet
 from utils import extract_numbers, write_json, read_json
-# from src.tools.utils import extract_numbers, write_json, read_json
 from denoise import smooth
 from event_detection import event_detect
 import logging
@@ -61,7 +60,7 @@ def ball_detect(video_path,result_path):
     court=read_json(cd_json_path)['court_info']            
             
 
-    d_save_dir = os.path.join(result_path, f"loca_info/{orivi_name}")
+    d_save_dir = os.path.join(f"{result_path}/ball", f"loca_info/{orivi_name}")
     f_source = str(video_path)
 
     if not os.path.exists(d_save_dir):
@@ -187,7 +186,7 @@ def ball_detect(video_path,result_path):
             pbar.update(1)
 
     # denoise file save path
-    dd_save_dir = os.path.join(result_path, f"loca_info(denoise)/{orivi_name}")
+    dd_save_dir = os.path.join(f"{result_path}/ball", f"loca_info(denoise)/{orivi_name}")
     os.makedirs(dd_save_dir, exist_ok=True)
 
     # json_path = f"{d_save_dir}/{video_name}.json"

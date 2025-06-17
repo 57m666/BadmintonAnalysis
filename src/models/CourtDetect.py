@@ -13,7 +13,6 @@ sys.path.append("src/tools")
 sys.path.append("src/models")
 
 from utils import read_json
-# from src.tools.utils import read_json
 
 class CourtDetect(object):
     '''
@@ -331,7 +330,7 @@ class CourtDetect(object):
                 for points in filtered_joint:
                     for i, joints in enumerate(points):
                         points[i] = joints[0:2]
-                    self.__complete_head_keypoints(points)
+                    # self.__complete_head_keypoints(points)
                 return (True, filtered_joint)
             else:
                 return (False, None)

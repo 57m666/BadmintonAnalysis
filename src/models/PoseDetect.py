@@ -13,7 +13,7 @@ class PoseDetect:
 
     def setup_yolo(self):
         # 加载yolov8n-pose模型
-        self.model = YOLO('yolo11n-pose.pt')
+        self.model = YOLO('src/models/weights/yolo11n-pose.pt')
 
     def del_yolo(self):
         del self.model
