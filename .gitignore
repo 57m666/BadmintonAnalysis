@@ -13,9 +13,10 @@ __pycache__/                    # Python 2 and 3 byte-code cache
 .Python                         # Python virtual environment folder (sometimes created)
 build/                          # Build directory
 dist/                           # Distribution directory
+.env
 .env/                           # Common name for virtual environment directory
-/venv/                          # Common name for virtual environment directory (also used by PyCharm by default)
-/env/                           # Another common virtual environment directory
+venv/                          # Common name for virtual environment directory (also used by PyCharm by default)
+env/                           # Another common virtual environment directory
 /pyvenv.cfg                     # Virtual environment configuration file (inside venv)
 
 # OS generated files
@@ -46,16 +47,8 @@ htmlcov/                        # Coverage report directory
 *.dll                           # Dynamic link libraries
 *.dylib                         # macOS dynamic libraries
 
-# Dependency management lock files (consider whether to commit)
-# Pipenv
-Pipfile.lock                    # Uncomment to ignore Pipfile.lock (usually committed)
-
-# Poetry
-poetry.lock                     # Uncomment to ignore poetry.lock (usually committed)
-
-
 # Example of ignoring a specific file/folder that's local
- *.pth
- *.pt
-/testvideos/
-/ShuttleSet/*
+*.pth
+*.pt
+testvideos/
+ShuttleSet/

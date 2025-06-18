@@ -74,5 +74,5 @@ python src/tools/VideoDraw.py --folder_path "videos" --result_path "res" --force
 ```
 
 ```python
- python -m src.tools.VideoDraw --folder_path "videos" --result_path "res" --force --court --net --players --ball --trajectory
+python -m src.tools.VideoDraw --folder_path "videos" --result_path "res" --force --court --net --players --ball --trajectory
 ```
