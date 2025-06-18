@@ -13,6 +13,7 @@ sys.path.append("src/tools")
 sys.path.append("src/models")
 
 from utils import read_json
+# from src.tools.utils import read_json
 class NetDetect(object):
     '''
     Tasks involving Keypoint RCNNs
