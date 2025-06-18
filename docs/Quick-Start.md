@@ -1,6 +1,10 @@
 You can download weights in <https://drive.google.com/drive/folders/16mVjXrul3VaXKfHHYauY0QI-SG-JVLvL?usp=sharing>
 
-add the weight folder to the "src/model"
+对于国内用户，可以在下面的链接中下载模型权重和ShuttleSet数据集 [通过网盘分享的文件：BadmintonAnalysis 提取码: u624](https://pan.baidu.com/s/1Eo3f9RtlqxN7cLJVIoreLQ?pwd=u624)
+
+add the weight folder to the "src/models"
+
+add the ShuttleSet to the Project root path "{Project Root Path}/ShuttleSet"
 
 # Creating a Environment
 
