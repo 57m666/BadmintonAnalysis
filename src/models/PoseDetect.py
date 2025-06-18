@@ -13,7 +13,7 @@ class PoseDetect:
 
     def setup_yolo(self):
         # 加载yolov8n-pose模型
-        self.model = YOLO('src/models/weights/yolo11n-pose.pt')
+        self.model = YOLO("src/models/weights/yolo11n-pose.pt")
 
     def del_yolo(self):
         del self.model
@@ -27,9 +27,26 @@ class PoseDetect:
 
     def draw_key_points(self, filtered_outputs, image, human_limit=-1):
         image_copy = image.copy()
-        edges = [(0, 1), (0, 2), (2, 4), (1, 3), (4, 6), (3, 5), (6, 8), (8, 10), (11, 12),
-                 (5, 7), (7, 9), (5, 11), (11, 13), (13, 15), (6, 12),
-                 (12, 14), (14, 16), (5, 6)]
+        edges = [
+            (0, 1),
+            (0, 2),
+            (2, 4),
+            (1, 3),
+            (4, 6),
+            (3, 5),
+            (6, 8),
+            (8, 10),
+            (11, 12),
+            (5, 7),
+            (7, 9),
+            (5, 11),
+            (11, 13),
+            (13, 15),
+            (6, 12),
+            (12, 14),
+            (14, 16),
+            (5, 6),
+        ]
 
         # top player is blue and bottom one is red
         top_color_edge = (255, 0, 0)
@@ -38,7 +55,6 @@ class PoseDetect:
         bot_color_joint = (35, 47, 204)
 
         for i in range(len(filtered_outputs)):
-
             if i > human_limit and human_limit != -1:
                 break
 
@@ -48,21 +64,28 @@ class PoseDetect:
             keypoints = np.array(filtered_outputs[i])  # 17, 2
             keypoints = keypoints[:, :].reshape(-1, 2)
             for p in range(keypoints.shape[0]):
-                cv2.circle(image_copy,
-                           (int(keypoints[p, 0]), int(keypoints[p, 1])),
-                           3,
-                           color_joint,
-                           thickness=-1,
-                           lineType=cv2.FILLED)
+                cv2.circle(
+                    image_copy,
+                    (int(keypoints[p, 0]), int(keypoints[p, 1])),
+                    3,
+                    color_joint,
+                    thickness=-1,
+                    lineType=cv2.FILLED,
+                )
 
             for e in edges:
-                if (int(keypoints[e[0]][0])!=0 and int(keypoints[e[1]][0])!=0 and
-                    int(keypoints[e[0]][1])!=0 and int(keypoints[e[1]][1])!=0):
-                    cv2.line(image_copy,
-                             (int(keypoints[e[0]][0]), int(keypoints[e[0]][1])),
-                             (int(keypoints[e[1]][0]), int(keypoints[e[1]][1])),
-                             color,
-                             2,
-                             lineType=cv2.LINE_AA)
+                if (
+                    int(keypoints[e[0]][0]) != 0
+                    and int(keypoints[e[1]][0]) != 0
+                    and int(keypoints[e[0]][1]) != 0
+                    and int(keypoints[e[1]][1]) != 0
+                ):
+                    cv2.line(
+                        image_copy,
+                        (int(keypoints[e[0]][0]), int(keypoints[e[0]][1])),
+                        (int(keypoints[e[1]][0]), int(keypoints[e[1]][1])),
+                        color,
+                        2,
+                        lineType=cv2.LINE_AA,
+                    )
         return image_copy
-

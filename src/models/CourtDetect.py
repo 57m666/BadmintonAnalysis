@@ -3,23 +3,38 @@ import torchvision
 import numpy as np
 import copy
 import cv2
-from PIL import Image
-from torchvision.transforms import transforms
 from torchvision.transforms import functional as F
-import os
-import sys
 
-sys.path.append("src/tools")
-sys.path.append("src/models")
+from ..tools.utils import read_json
+
+
+def _get_optimal_device():
+    """
+    根据当前环境检测并返回最佳设备。
+    """
+    if torch.cuda.is_available():
+        print("CUDA is available. Using GPU.")
+        return "cuda"
+    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        print("MPS is available. Using Apple Silicon GPU acceleration.")
+        return "mps"
+    else:
+        print("No GPU found. Using CPU.")
+        return "cpu"
+
 
 from utils import read_json
+
+
 # from src.tools.utils import read_json
 class CourtDetect(object):
-    '''
+    """
     Tasks involving Keypoint RCNNs
-    '''
+    """
+
     def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # 优化：根据设备动态设置 self.device
+        self.device = _get_optimal_device()
         self.normal_court_info = None
         self.got_info = False
         self.mse = None
@@ -30,7 +45,32 @@ class CourtDetect(object):
         self.normal_court_info = None
 
     def setup_RCNN(self):
-        self.__court_kpRCNN = torch.load('src/models/weights/court_kpRCNN.pth')
+        """
+        加载模型，并根据 self.device 映射到相应的设备。
+        """
+        model_path = "src/models/weights/court_kpRCNN.pth"
+
+        if self.device == "cuda":
+            # Windows/Linux 带有 CUDA 的设备
+            # 不需要 map_location，因为模型通常在 CUDA 上训练和保存
+            # 如果模型是在特定GPU保存的，而当前GPU是另一个ID，torch会自动处理
+            # 除非你想强制加载到CPU再移到GPU（通常不这么做）
+            self.__court_kpRCNN = torch.load(model_path)
+            print(f"Model loaded to CUDA device: {torch.cuda.current_device()}")
+        elif self.device == "mps":
+            # macOS M系列芯片
+            self.__court_kpRCNN = torch.load(
+                model_path, map_location=torch.device("mps")
+            )
+            print("Model loaded to MPS device (Apple Silicon GPU).")
+        else:  # self.device == "cpu"
+            # 没有 CUDA 或 MPS 的设备，或者强制使用 CPU
+            self.__court_kpRCNN = torch.load(
+                model_path, map_location=torch.device("cpu")
+            )
+            print("Model loaded to CPU.")
+
+        # 将模型移动到当前确定的设备上
         self.__court_kpRCNN.to(self.device).eval()
 
     def del_RCNN(self):
@@ -48,11 +88,11 @@ class CourtDetect(object):
         total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         court_info_list = []
         # the number of skip frams per time
-        skip_frames = int(fps)
+        skip_frames = max(5, int(fps // 2))
 
         if reference_path is not None:
             reference_data = read_json(reference_path)
-            self.normal_court_info = reference_data['court_info']
+            self.normal_court_info = reference_data["court_info"]
             if self.normal_court_info is None:
                 video.release()
                 return total_frames
@@ -89,6 +129,9 @@ class CourtDetect(object):
                 elif not ret:
                     return total_frames
                 else:
+                    video.set(cv2.CAP_PROP_POS_FRAMES, current_frame + skip_frames)
+                    last_count = 0
+                    court_info_list = []
                     continue
 
             if not ret:
@@ -101,9 +144,7 @@ class CourtDetect(object):
                 court_info_list.append(court_info)
             else:
                 if current_frame + skip_frames >= total_frames:
-                    print(
-                        "Fail to pre-process! Please to check the video or program!"
-                    )
+                    print("Fail to pre-process! Please to check the video or program!")
                     return total_frames
 
                 video.set(cv2.CAP_PROP_POS_FRAMES, current_frame + skip_frames)
@@ -114,8 +155,14 @@ class CourtDetect(object):
         vec1 = np.array(self.normal_court_info)
         vec2 = np.array(court_info)
         mse = np.square(vec1 - vec2).mean()
+
+        # print("=== MSE 检查 ===")
+        # print("normal_court_info:", self.normal_court_info)
+        # print("current_court_info:", court_info)
+        # print("MSE:", mse)
+
         self.mse = mse
-        if mse > 100:
+        if mse > 400:
             return False
         return True
 
@@ -126,46 +173,50 @@ class CourtDetect(object):
         image = F.to_tensor(image)
         image = image.unsqueeze(0)
         image = image.to(self.device)
-        output = self.__court_kpRCNN(image)
-        scores = output[0]['scores'].detach().cpu().numpy()
-        high_scores_idxs = np.where(scores > 0.7)[0].tolist()
-        post_nms_idxs = torchvision.ops.nms(
-            output[0]['boxes'][high_scores_idxs],
-            output[0]['scores'][high_scores_idxs], 0.3).cpu().numpy()
 
-        if len(output[0]['keypoints'][high_scores_idxs][post_nms_idxs]) == 0:
+        output = self.__court_kpRCNN(image)
+        scores = output[0]["scores"].detach().cpu().numpy()
+        high_scores_idxs = np.where(scores > 0.7)[0].tolist()
+        post_nms_idxs = (
+            torchvision.ops.nms(
+                output[0]["boxes"][high_scores_idxs],
+                output[0]["scores"][high_scores_idxs],
+                0.3,
+            )
+            .cpu()
+            .numpy()
+        )
+
+        if len(output[0]["keypoints"][high_scores_idxs][post_nms_idxs]) == 0:
             self.got_info = False
             return None, self.got_info
 
         keypoints = []
-        for kps in output[0]['keypoints'][high_scores_idxs][
-                post_nms_idxs].detach().cpu().numpy():
+        for kps in (
+            output[0]["keypoints"][high_scores_idxs][post_nms_idxs]
+            .detach()
+            .cpu()
+            .numpy()
+        ):
             keypoints.append([list(map(int, kp[:2])) for kp in kps])
 
         self.__true_court_points = copy.deepcopy(keypoints[0])
-        '''
+        """
         l -> left, r -> right, y = a * x + b
-        '''
+        """
         # correct to avoid the divide 0
-        l_am = (self.__true_court_points[0][1] -
-                self.__true_court_points[4][1])
-        l_ad = (self.__true_court_points[0][0] -
-                self.__true_court_points[4][0])
+        l_am = self.__true_court_points[0][1] - self.__true_court_points[4][1]
+        l_ad = self.__true_court_points[0][0] - self.__true_court_points[4][0]
         l_a = l_am / (1 if l_ad == 0 else l_ad)
-        l_b = self.__true_court_points[0][
-            1] - l_a * self.__true_court_points[0][0]
+        l_b = self.__true_court_points[0][1] - l_a * self.__true_court_points[0][0]
 
         # correct to avoid the divide 0
-        r_am = (self.__true_court_points[1][1] -
-                self.__true_court_points[5][1])
-        r_ad = (self.__true_court_points[1][0] -
-                self.__true_court_points[5][0])
+        r_am = self.__true_court_points[1][1] - self.__true_court_points[5][1]
+        r_ad = self.__true_court_points[1][0] - self.__true_court_points[5][0]
         r_a = r_am / (1 if r_ad == 0 else r_ad)
 
-        r_b = self.__true_court_points[1][
-            1] - r_a * self.__true_court_points[1][0]
-        mp_y = (self.__true_court_points[2][1] +
-                self.__true_court_points[3][1]) / 2
+        r_b = self.__true_court_points[1][1] - r_a * self.__true_court_points[1][0]
+        mp_y = (self.__true_court_points[2][1] + self.__true_court_points[3][1]) / 2
 
         self.__court_info = [l_a, l_b, r_a, r_b, mp_y]
 
@@ -175,14 +226,21 @@ class CourtDetect(object):
         if self.normal_court_info is not None:
             self.got_info = self.__check_court(self.__correct_points)
             if not self.got_info:
-                return None, self.got_info
+                # 尝试允许当前帧作为新的参考（如果差距不大）
+                if self.mse < 150:  # 小幅偏差仍接受
+                    print(
+                        "[Warn] 当前 court 与参考差距略大（MSE≈{}），仍然使用".format(
+                            self.mse
+                        )
+                    )
+                    self.got_info = True
+                else:
+                    return None, self.got_info
 
         if self.normal_court_info is None:
-            self.__multi_points = self.__partition(
-                self.__correct_points).tolist()
+            self.__multi_points = self.__partition(self.__correct_points).tolist()
         else:
-            self.__multi_points = self.__partition(
-                self.normal_court_info).tolist()
+            self.__multi_points = self.__partition(self.normal_court_info).tolist()
 
         keypoints[0][0][0] -= 80
         keypoints[0][0][1] -= 80
@@ -209,32 +267,81 @@ class CourtDetect(object):
         elif mode == "frame_select":
             if self.__correct_points is None:
                 return image
-            self.__multi_points = self.__partition(
-                self.__correct_points).tolist()
 
         image_copy = image.copy()
-        c_edges = [[0, 1], [0, 5], [1, 2], [1, 6], [2, 3], [2, 7], [3, 4],
-                   [3, 8], [4, 9], [5, 6], [5, 10], [6, 7], [6, 11], [7, 8],
-                   [7, 12], [8, 9], [8, 13], [9, 14], [10, 11], [10, 15],
-                   [11, 12], [11, 16], [12, 13], [12, 17], [13, 14], [13, 18],
-                   [14, 19], [15, 16], [15, 20], [16, 17], [16, 21], [17, 18],
-                   [17, 22], [18, 19], [18, 23], [19, 24], [20, 21], [20, 25],
-                   [21, 22], [21, 26], [22, 23], [22, 27], [23, 24], [23, 28],
-                   [24, 29], [25, 26], [25, 30], [26, 27], [26, 31], [27, 28],
-                   [27, 32], [28, 29], [28, 33], [29, 34], [30, 31], [31, 32],
-                   [32, 33], [33, 34]]
+        c_edges = [
+            [0, 1],
+            [0, 5],
+            [1, 2],
+            [1, 6],
+            [2, 3],
+            [2, 7],
+            [3, 4],
+            [3, 8],
+            [4, 9],
+            [5, 6],
+            [5, 10],
+            [6, 7],
+            [6, 11],
+            [7, 8],
+            [7, 12],
+            [8, 9],
+            [8, 13],
+            [9, 14],
+            [10, 11],
+            [10, 15],
+            [11, 12],
+            [11, 16],
+            [12, 13],
+            [12, 17],
+            [13, 14],
+            [13, 18],
+            [14, 19],
+            [15, 16],
+            [15, 20],
+            [16, 17],
+            [16, 21],
+            [17, 18],
+            [17, 22],
+            [18, 19],
+            [18, 23],
+            [19, 24],
+            [20, 21],
+            [20, 25],
+            [21, 22],
+            [21, 26],
+            [22, 23],
+            [22, 27],
+            [23, 24],
+            [23, 28],
+            [24, 29],
+            [25, 26],
+            [25, 30],
+            [26, 27],
+            [26, 31],
+            [27, 28],
+            [27, 32],
+            [28, 29],
+            [28, 33],
+            [29, 34],
+            [30, 31],
+            [31, 32],
+            [32, 33],
+            [33, 34],
+        ]
         court_color_edge = (53, 195, 242)
         court_color_kps = (5, 135, 242)
 
         # draw the court
         for e in c_edges:
-            cv2.line(image_copy, (int(self.__multi_points[e[0]][0]),
-                                  int(self.__multi_points[e[0]][1])),
-                     (int(self.__multi_points[e[1]][0]),
-                      int(self.__multi_points[e[1]][1])),
-                     court_color_edge,
-                     2,
-                     lineType=cv2.LINE_AA)
+            cv2.line(
+                image_copy,
+                (int(self.__multi_points[e[0]][0]), int(self.__multi_points[e[0]][1])),
+                (int(self.__multi_points[e[1]][0]), int(self.__multi_points[e[1]][1])),
+                court_color_edge,
+                2,
+                lineType=cv2.LINE_AA,
+            )
         for kps in [self.__multi_points]:
             for kp in kps:
                 cv2.circle(image_copy, tuple(kp), 1, court_color_kps, 5)
@@ -255,47 +362,78 @@ class CourtDetect(object):
         return court_kp
 
     def __partition(self, court_crkp):
-        court_kp = np.array(court_crkp)
-        tlspace = np.array([
-            np.round((court_kp[0][0] - court_kp[2][0]) / 3),
-            np.round((court_kp[2][1] - court_kp[0][1]) / 3)
-        ],
-                           dtype=int)
-        trspace = np.array([
-            np.round((court_kp[3][0] - court_kp[1][0]) / 3),
-            np.round((court_kp[3][1] - court_kp[1][1]) / 3)
-        ],
-                           dtype=int)
-        blspace = np.array([
-            np.round((court_kp[2][0] - court_kp[4][0]) / 3),
-            np.round((court_kp[4][1] - court_kp[2][1]) / 3)
-        ],
-                           dtype=int)
-        brspace = np.array([
-            np.round((court_kp[5][0] - court_kp[3][0]) / 3),
-            np.round((court_kp[5][1] - court_kp[3][1]) / 3)
-        ],
-                           dtype=int)
+        # court_kp = np.array(court_crkp)
+        # 确保输入是 numpy 数组
+        court_kp = np.array(court_crkp, dtype=np.float32)
+        # 确保关键点数量足够
+        if court_kp.shape[0] < 6:
+            print("[WARNING] Not enough court keypoints for partition.")
+            return np.array([])  # 返回空数组或合适的默认值
+        # 确保关键点是二维的 (x, y)
+        if court_kp.shape[1] != 2:
+            print(
+                f"[WARNING] Incorrect court keypoints shape: {court_kp.shape}. Expected (N, 2)."
+            )
+            return np.array([])  # 返回空数组或合适的默认值
 
-        p2 = np.array(
-            [court_kp[0][0] - tlspace[0], court_kp[0][1] + tlspace[1]])
-        p3 = np.array(
-            [court_kp[1][0] + trspace[0], court_kp[1][1] + trspace[1]])
+        tlspace = np.array(
+            [
+                np.round((court_kp[0][0] - court_kp[2][0]) / 3),
+                np.round((court_kp[2][1] - court_kp[0][1]) / 3),
+            ],
+            dtype=int,
+        )
+        trspace = np.array(
+            [
+                np.round((court_kp[3][0] - court_kp[1][0]) / 3),
+                np.round((court_kp[3][1] - court_kp[1][1]) / 3),
+            ],
+            dtype=int,
+        )
+        blspace = np.array(
+            [
+                np.round((court_kp[2][0] - court_kp[4][0]) / 3),
+                np.round((court_kp[4][1] - court_kp[2][1]) / 3),
+            ],
+            dtype=int,
+        )
+        brspace = np.array(
+            [
+                np.round((court_kp[5][0] - court_kp[3][0]) / 3),
+                np.round((court_kp[5][1] - court_kp[3][1]) / 3),
+            ],
+            dtype=int,
+        )
+
+        p2 = np.array([court_kp[0][0] - tlspace[0], court_kp[0][1] + tlspace[1]])
+        p3 = np.array([court_kp[1][0] + trspace[0], court_kp[1][1] + trspace[1]])
         p4 = np.array([p2[0] - tlspace[0], p2[1] + tlspace[1]])
         p5 = np.array([p3[0] + trspace[0], p3[1] + trspace[1]])
 
-        p8 = np.array(
-            [court_kp[2][0] - blspace[0], court_kp[2][1] + blspace[1]])
-        p9 = np.array(
-            [court_kp[3][0] + brspace[0], court_kp[3][1] + brspace[1]])
+        p8 = np.array([court_kp[2][0] - blspace[0], court_kp[2][1] + blspace[1]])
+        p9 = np.array([court_kp[3][0] + brspace[0], court_kp[3][1] + brspace[1]])
         p10 = np.array([p8[0] - blspace[0], p8[1] + blspace[1]])
         p11 = np.array([p9[0] + brspace[0], p9[1] + brspace[1]])
 
-        kp = np.array([
-            court_kp[0], court_kp[1], p2, p3, p4, p5, court_kp[2], court_kp[3],
-            p8, p9, p10, p11, court_kp[4], court_kp[5]
-        ],
-                      dtype=int)
+        kp = np.array(
+            [
+                court_kp[0],
+                court_kp[1],
+                p2,
+                p3,
+                p4,
+                p5,
+                court_kp[2],
+                court_kp[3],
+                p8,
+                p9,
+                p10,
+                p11,
+                court_kp[4],
+                court_kp[5],
+            ],
+            dtype=int,
+        )
 
         ukp = []
 
@@ -318,19 +456,16 @@ class CourtDetect(object):
         in_court_indices = self.__check_in_court_instances(joints)
 
         if in_court_indices:
-            conform, combination = self.__check_top_bot_court(
-                in_court_indices, boxes)
+            conform, combination = self.__check_top_bot_court(in_court_indices, boxes)
             if conform:
-                filtered_joint.append(
-                    joints[in_court_indices[combination[0]]].tolist())
-                filtered_joint.append(
-                    joints[in_court_indices[combination[1]]].tolist())
+                filtered_joint.append(joints[in_court_indices[combination[0]]].tolist())
+                filtered_joint.append(joints[in_court_indices[combination[1]]].tolist())
                 filtered_joint = self.__top_bottom(filtered_joint)
 
                 for points in filtered_joint:
                     for i, joints in enumerate(points):
                         points[i] = joints[0:2]
-                    # self.__complete_head_keypoints(points)
+                    self.__complete_head_keypoints(points)
                 return (True, filtered_joint)
             else:
                 return (False, None)
@@ -364,50 +499,74 @@ class CourtDetect(object):
         while changed:
             changed = False
 
-            if is_missing(points[NOSE]) and not is_missing(points[LEFT_EYE]) and not is_missing(points[RIGHT_EYE]):
+            if (
+                is_missing(points[NOSE])
+                and not is_missing(points[LEFT_EYE])
+                and not is_missing(points[RIGHT_EYE])
+            ):
                 points[NOSE] = [
                     0.5 * (points[LEFT_EYE][0] + points[RIGHT_EYE][0]),
-                    0.5 * (points[LEFT_EYE][1] + points[RIGHT_EYE][1])
+                    0.5 * (points[LEFT_EYE][1] + points[RIGHT_EYE][1]),
                 ]
                 changed = True
 
-            if is_missing(points[LEFT_EYE]) and not is_missing(points[NOSE]) and not is_missing(points[LEFT_EAR]):
+            if (
+                is_missing(points[LEFT_EYE])
+                and not is_missing(points[NOSE])
+                and not is_missing(points[LEFT_EAR])
+            ):
                 points[LEFT_EYE] = [
                     0.6 * points[NOSE][0] + 0.4 * points[LEFT_EAR][0],
-                    0.6 * points[NOSE][1] + 0.4 * points[LEFT_EAR][1]
+                    0.6 * points[NOSE][1] + 0.4 * points[LEFT_EAR][1],
                 ]
                 changed = True
 
-            if is_missing(points[RIGHT_EYE]) and not is_missing(points[NOSE]) and not is_missing(points[RIGHT_EAR]):
+            if (
+                is_missing(points[RIGHT_EYE])
+                and not is_missing(points[NOSE])
+                and not is_missing(points[RIGHT_EAR])
+            ):
                 points[RIGHT_EYE] = [
                     0.6 * points[NOSE][0] + 0.4 * points[RIGHT_EAR][0],
-                    0.6 * points[NOSE][1] + 0.4 * points[RIGHT_EAR][1]
+                    0.6 * points[NOSE][1] + 0.4 * points[RIGHT_EAR][1],
                 ]
                 changed = True
 
-            if is_missing(points[LEFT_EAR]) and not is_missing(points[LEFT_EYE]) and not is_missing(points[NOSE]):
+            if (
+                is_missing(points[LEFT_EAR])
+                and not is_missing(points[LEFT_EYE])
+                and not is_missing(points[NOSE])
+            ):
                 points[LEFT_EAR] = [
                     1.5 * points[LEFT_EYE][0] - 0.5 * points[NOSE][0],
-                    1.5 * points[LEFT_EYE][1] - 0.5 * points[NOSE][1]
+                    1.5 * points[LEFT_EYE][1] - 0.5 * points[NOSE][1],
                 ]
                 changed = True
 
-            if is_missing(points[RIGHT_EAR]) and not is_missing(points[RIGHT_EYE]) and not is_missing(points[NOSE]):
+            if (
+                is_missing(points[RIGHT_EAR])
+                and not is_missing(points[RIGHT_EYE])
+                and not is_missing(points[NOSE])
+            ):
                 points[RIGHT_EAR] = [
                     1.5 * points[RIGHT_EYE][0] - 0.5 * points[NOSE][0],
-                    1.5 * points[RIGHT_EYE][1] - 0.5 * points[NOSE][1]
+                    1.5 * points[RIGHT_EYE][1] - 0.5 * points[NOSE][1],
                 ]
                 changed = True
 
-            if is_missing(points[NOSE]) and not is_missing(points[LEFT_EAR]) and not is_missing(points[RIGHT_EAR]):
+            if (
+                is_missing(points[NOSE])
+                and not is_missing(points[LEFT_EAR])
+                and not is_missing(points[RIGHT_EAR])
+            ):
                 mid = [
                     0.5 * (points[LEFT_EAR][0] + points[RIGHT_EAR][0]),
-                    0.5 * (points[LEFT_EAR][1] + points[RIGHT_EAR][1])
+                    0.5 * (points[LEFT_EAR][1] + points[RIGHT_EAR][1]),
                 ]
                 dx = points[RIGHT_EAR][0] - points[LEFT_EAR][0]
                 dy = points[RIGHT_EAR][1] - points[LEFT_EAR][1]
                 nx, ny = -dy, dx
-                norm = (nx ** 2 + ny ** 2) ** 0.5
+                norm = (nx**2 + ny**2) ** 0.5
                 if norm > 1e-3:
                     nx /= norm
                     ny /= norm
@@ -415,19 +574,23 @@ class CourtDetect(object):
                     points[NOSE] = [mid[0] + offset * nx, mid[1] + offset * ny]
                     changed = True
 
-            if not is_missing(points[NOSE]) and not is_missing(points[LEFT_EAR]) and not is_missing(points[RIGHT_EAR]):
+            if (
+                not is_missing(points[NOSE])
+                and not is_missing(points[LEFT_EAR])
+                and not is_missing(points[RIGHT_EAR])
+            ):
                 dx = points[RIGHT_EAR][0] - points[LEFT_EAR][0]
                 dy = points[RIGHT_EAR][1] - points[LEFT_EAR][1]
                 if is_missing(points[LEFT_EYE]):
                     points[LEFT_EYE] = [
                         points[NOSE][0] - 0.15 * dx,
-                        points[NOSE][1] - 0.15 * dy
+                        points[NOSE][1] - 0.15 * dy,
                     ]
                     changed = True
                 if is_missing(points[RIGHT_EYE]):
                     points[RIGHT_EYE] = [
                         points[NOSE][0] + 0.15 * dx,
-                        points[NOSE][1] + 0.15 * dy
+                        points[NOSE][1] + 0.15 * dy,
                     ]
                     changed = True
 
@@ -451,21 +614,19 @@ class CourtDetect(object):
         return joint
 
     def __check_top_bot_court(self, indices, boxes):
-        '''
+        """
         check if up court and bot court got player
-        
-        if detect the player left the court, the get_court_info will return False  even if it detects the court.  
+
+        if detect the player left the court, the get_court_info will return False  even if it detects the court.
 
         To some degree, it will impact on getting player's posture data.
-        '''
+        """
         court_mp = self.__court_info[4]
         for i in range(len(indices)):
             combination = 1
-            if boxes[indices[0]][1] < court_mp < boxes[
-                    indices[combination]][3]:
+            if boxes[indices[0]][1] < court_mp < boxes[indices[combination]][3]:
                 return True, [0, combination]
-            elif boxes[indices[0]][3] > court_mp > boxes[
-                    indices[combination]][1]:
+            elif boxes[indices[0]][3] > court_mp > boxes[indices[combination]][1]:
                 return True, [0, combination]
             else:
                 combination += 1
@@ -479,15 +640,13 @@ class CourtDetect(object):
         return None if len(indices) < 2 else indices
 
     def __in_court(self, joint):
-        '''
+        """
         check if player is in court
-        '''
+        """
         l_a = self.__court_info[0]
         l_b = self.__court_info[1]
         r_a = self.__court_info[2]
         r_b = self.__court_info[3]
-
-        
 
         ankle_x = (joint[15][0] + joint[16][0]) / 2
         ankle_y = (joint[15][1] + joint[16][1]) / 2

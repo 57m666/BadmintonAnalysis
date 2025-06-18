@@ -19,11 +19,17 @@ import pandas as pd
 import pickle
 import json
 from utils import extract_numbers, write_json, read_json
+
 # from src.tools.utils import extract_numbers, write_json, read_json
 from denoise import smooth
 from event_detection import event_detect
 import logging
 import traceback
+
+from ..models.TrackNet import TrackNet
+from .utils import extract_numbers, write_json, read_json
+from .denoise import smooth
+
 
 # from yolov5 detect.py
 FILE = Path(__file__).resolve()
@@ -41,14 +47,14 @@ def ball_detect(video_path, result_path):
 
     cd_save_dir = os.path.join(f"{result_path}/courts", f"court_kp")
     cd_json_path = f"{cd_save_dir}/{orivi_name}.json"
-    court = read_json(cd_json_path)['court_info']
+    court = read_json(cd_json_path)["court_info"]
 
     d_save_dir = os.path.join(f"{result_path}/ball", f"loca_info/{orivi_name}")
     f_source = str(video_path)
 
     if not os.path.exists(d_save_dir):
         os.makedirs(d_save_dir)
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     model = TrackNet().to(device)
     model.load_state_dict(torch.load("src/models/weights/ball_track.pt"))
@@ -69,7 +75,11 @@ def ball_detect(video_path, result_path):
 
     with tqdm(total=video_len) as pbar:
         while vid_cap.isOpened() and count < video_len:
-            print("Processing frame: vid frame:", count, int(vid_cap.get(cv2.CAP_PROP_POS_FRAMES)))
+            print(
+                "Processing frame: vid frame:",
+                count,
+                int(vid_cap.get(cv2.CAP_PROP_POS_FRAMES)),
+            )
             ret, frame = vid_cap.read()
             if not ret:
                 break
@@ -117,7 +127,8 @@ def ball_detect(video_path, result_path):
                         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                         img_torch = torchvision.transforms.ToTensor()(img).to(device)
                         img_torch = torchvision.transforms.functional.resize(
-                            img_torch, imgsz, antialias=True)
+                            img_torch, imgsz, antialias=True
+                        )
                         imgs_torch.append(img_torch)
 
                     imgs_torch = torch.cat(imgs_torch, dim=0).unsqueeze(0)
@@ -125,9 +136,9 @@ def ball_detect(video_path, result_path):
                     preds = preds[0].detach().cpu().numpy()
 
                     y_preds = preds > 0.6
-                    y_preds = y_preds.astype('float32')
+                    y_preds = y_preds.astype("float32")
                     y_preds = y_preds * 255
-                    y_preds = y_preds.astype('uint8')
+                    y_preds = y_preds.astype("uint8")
 
                     # 处理3帧的结果
                     frames_to_process = min(len(imgs), 3)
@@ -136,17 +147,25 @@ def ball_detect(video_path, result_path):
                             break
 
                         if np.amax(y_preds[i]) <= 0:
-                            results[f"{count + start_frame}"] = {"visible": 0, "x": 0, "y": 0}
+                            results[f"{count + start_frame}"] = {
+                                "visible": 0,
+                                "x": 0,
+                                "y": 0,
+                            }
                         else:
-                            pred_img = cv2.resize(y_preds[i], (w, h),
-                                                  interpolation=cv2.INTER_AREA)
+                            pred_img = cv2.resize(
+                                y_preds[i], (w, h), interpolation=cv2.INTER_AREA
+                            )
 
-                            (cnts, _) = cv2.findContours(pred_img, cv2.RETR_EXTERNAL,
-                                                         cv2.CHAIN_APPROX_SIMPLE)
+                            (cnts, _) = cv2.findContours(
+                                pred_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+                            )
                             if cnts:  # 确保找到轮廓
                                 rects = [cv2.boundingRect(ctr) for ctr in cnts]
                                 max_area_idx = 0
-                                max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
+                                max_area = (
+                                    rects[max_area_idx][2] * rects[max_area_idx][3]
+                                )
 
                                 for ii in range(len(rects)):
                                     area = rects[ii][2] * rects[ii][3]
@@ -157,9 +176,17 @@ def ball_detect(video_path, result_path):
                                 target = rects[max_area_idx]
                                 cx_pred = int(target[0] + target[2] / 2)
                                 cy_pred = int(target[1] + target[3] / 2)
-                                results[f"{count + start_frame}"] = {"visible": 1, "x": cx_pred, "y": cy_pred}
+                                results[f"{count + start_frame}"] = {
+                                    "visible": 1,
+                                    "x": cx_pred,
+                                    "y": cy_pred,
+                                }
                             else:
-                                results[f"{count + start_frame}"] = {"visible": 0, "x": 0, "y": 0}
+                                results[f"{count + start_frame}"] = {
+                                    "visible": 0,
+                                    "x": 0,
+                                    "y": 0,
+                                }
 
                         count += 1
                         pbar.update(1)
@@ -182,11 +209,13 @@ def ball_detect(video_path, result_path):
         pbar.update(1)
 
     # 保存结果
-    with open(f"{d_save_dir}/{video_name}.json", 'w') as f:
+    with open(f"{d_save_dir}/{video_name}.json", "w") as f:
         json.dump(results, f)
 
     # denoise file save path
-    dd_save_dir = os.path.join(f"{result_path}/ball", f"loca_info(denoise)/{orivi_name}")
+    dd_save_dir = os.path.join(
+        f"{result_path}/ball", f"loca_info(denoise)/{orivi_name}"
+    )
     os.makedirs(dd_save_dir, exist_ok=True)
 
     # smooth trajectory
@@ -194,17 +223,24 @@ def ball_detect(video_path, result_path):
         json_path = f"{d_save_dir}/{video_name}.json"
         smooth(json_path, court, dd_save_dir)
     except KeyboardInterrupt:
-        print("Caught exception type on main.py ball_detect:",
-              type(KeyboardInterrupt).__name__)
-        logging.basicConfig(filename='logs/error.log', level=logging.ERROR,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
+        print(
+            "Caught exception type on main.py ball_detect:",
+            type(KeyboardInterrupt).__name__,
+        )
+        logging.basicConfig(
+            filename="logs/error.log",
+            level=logging.ERROR,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+        )
         logging.error(traceback.format_exc())
         exit()
     except Exception:
-        print("Caught exception type on main.py ball_detect:",
-              type(Exception).__name__)
-        logging.basicConfig(filename='logs/error.log', level=logging.ERROR,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
+        print("Caught exception type on main.py ball_detect:", type(Exception).__name__)
+        logging.basicConfig(
+            filename="logs/error.log",
+            level=logging.ERROR,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+        )
         logging.error(traceback.format_exc())
 
     vid_cap.release()

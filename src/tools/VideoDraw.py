@@ -1,62 +1,45 @@
 import cv2
-import copy
 from tqdm import tqdm
 import numpy as np
-import matplotlib.pyplot as plt
-from torchvision.transforms import transforms
-from torchvision.transforms import functional as F
 import os
-import sys
 import argparse
 from collections import deque
 from PIL import Image, ImageDraw
 
-sys.path.append("src/tools")
-sys.path.append("src/models")
+from .utils import (
+    find_reference,
+    read_json,
+)
+from ..models.PoseDetect import PoseDetect
+from ..models.CourtDetect import CourtDetect
+from ..models.NetDetect import NetDetect
 
-from utils import write_json, clear_file, is_video_detect, find_next, find_reference, read_json
-from VideoClip import VideoClip
-from PoseDetect import PoseDetect
-from CourtDetect import CourtDetect
-from NetDetect import NetDetect
-
-parser = argparse.ArgumentParser(description='para transfer')
-parser.add_argument('--folder_path',
-                    type=str,
-                    default="videos",
-                    help='folder_path -> str type.')
-parser.add_argument('--result_path',
-                    type=str,
-                    default="res",
-                    help='result_path -> str type.')
-parser.add_argument('--force',
-                    action='store_true',
-                    default=False,
-                    help='force -> bool type.')
-parser.add_argument('--court',
-                    action='store_true',
-                    default=False,
-                    help='court -> bool type.')
-parser.add_argument('--net',
-                    action='store_true',
-                    default=False,
-                    help='net -> bool type.')
-parser.add_argument('--players',
-                    action='store_true',
-                    default=False,
-                    help='players -> bool type.')
-parser.add_argument('--ball',
-                    action='store_true',
-                    default=False,
-                    help='ball -> bool type.')
-parser.add_argument('--trajectory',
-                    action='store_true',
-                    default=False,
-                    help='trajectory -> bool type.')
-parser.add_argument('--traj_len',
-                    type=int,
-                    default=8,
-                    help='traj_len -> int type.')
+parser = argparse.ArgumentParser(description="para transfer")
+parser.add_argument(
+    "--folder_path", type=str, default="videos", help="folder_path -> str type."
+)
+parser.add_argument(
+    "--result_path", type=str, default="res", help="result_path -> str type."
+)
+parser.add_argument(
+    "--force", action="store_true", default=False, help="force -> bool type."
+)
+parser.add_argument(
+    "--court", action="store_true", default=False, help="court -> bool type."
+)
+parser.add_argument(
+    "--net", action="store_true", default=False, help="net -> bool type."
+)
+parser.add_argument(
+    "--players", action="store_true", default=False, help="players -> bool type."
+)
+parser.add_argument(
+    "--ball", action="store_true", default=False, help="ball -> bool type."
+)
+parser.add_argument(
+    "--trajectory", action="store_true", default=False, help="trajectory -> bool type."
+)
+parser.add_argument("--traj_len", type=int, default=8, help="traj_len -> int type.")
 args = parser.parse_args()
 print(args)
 
@@ -73,10 +56,10 @@ traj_len = args.traj_len
 for root, dirs, files in os.walk(folder_path):
     for file in files:
         _, ext = os.path.splitext(file)
-        if ext.lower() in ['.mp4']:
+        if ext.lower() in [".mp4"]:
             video_path = os.path.join(root, file)
             print(video_path)
-            video_name = os.path.basename(video_path).split('.')[0]
+            video_name = os.path.basename(video_path).split(".")[0]
 
             process_video_path = f"{result_path}/videos/{video_name}/{video_name}.mp4"
             if os.path.exists(process_video_path):
@@ -92,11 +75,12 @@ for root, dirs, files in os.walk(folder_path):
             # read ball location
             ball_dict = {}
             for res_root, res_dirs, res_files in os.walk(
-                    f"{result_path}/ball/loca_info(denoise)/{video_name}"):
+                f"{result_path}/ball/loca_info(denoise)/{video_name}"
+            ):
                 for res_file in res_files:
                     print(res_root)
                     _, ext = os.path.splitext(res_file)
-                    if ext.lower() in ['.json']:
+                    if ext.lower() in [".json"]:
                         res_json_path = os.path.join(res_root, res_file)
                         ball_dict.update(read_json(res_json_path))
 
@@ -108,10 +92,9 @@ for root, dirs, files in os.walk(folder_path):
             width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 
             # Define the codec for the output video
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            output_path = f'{full_video_path}/{video_name}.mp4'
-            video_writer = cv2.VideoWriter(output_path, fourcc, fps,
-                                           (width, height))
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            output_path = f"{full_video_path}/{video_name}.mp4"
+            video_writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -123,8 +106,7 @@ for root, dirs, files in os.walk(folder_path):
             _ = court_detect.pre_process(video_path, reference_path)
             _ = net_detect.pre_process(video_path, reference_path)
 
-            reference_path = find_reference(video_name,
-                                            "res/players/player_kp")
+            reference_path = find_reference(video_name, "res/players/player_kp")
             players_dict = read_json(reference_path)
 
             with tqdm(total=total_frames) as pbar:
@@ -138,7 +120,7 @@ for root, dirs, files in os.walk(folder_path):
                         break
 
                     joints = players_dict[f"{current_frame}"]
-                    players_joints = [joints['top'], joints['bottom']]
+                    players_joints = [joints["top"], joints["bottom"]]
 
                     can_draw = True
                     if players_joints[0] is None or players_joints[1] is None:
@@ -150,23 +132,21 @@ for root, dirs, files in os.walk(folder_path):
                         if net:
                             frame = net_detect.draw_net(frame)
                         if players:
-                            frame = pose_detect.draw_key_points(
-                                players_joints, frame)
+                            frame = pose_detect.draw_key_points(players_joints, frame)
                         if ball:
                             if str(current_frame) in ball_dict:
                                 loca_dict = ball_dict[f"{current_frame}"]
                                 if loca_dict["visible"] == 1:
-                                    x = int(loca_dict['x'])
-                                    y = int(loca_dict['y'])
-                                    cv2.circle(frame, (x, y), 8, (0, 0, 255),
-                                               -1)
+                                    x = int(loca_dict["x"])
+                                    y = int(loca_dict["y"])
+                                    cv2.circle(frame, (x, y), 8, (0, 0, 255), -1)
                         if trajectory:
                             if str(current_frame) in ball_dict:
                                 loca_dict = ball_dict[f"{current_frame}"]
                                 # Push ball coordinates for each frame
                                 if loca_dict["visible"] == 1:
-                                    x = int(loca_dict['x'])
-                                    y = int(loca_dict['y'])
+                                    x = int(loca_dict["x"])
+                                    y = int(loca_dict["y"])
                                     if len(traj_queue) >= traj_len:
                                         traj_queue.pop()
                                     traj_queue.appendleft([x, y])
@@ -184,15 +164,18 @@ for root, dirs, files in os.walk(folder_path):
                                     if traj_queue[i] is not None:
                                         draw_x = traj_queue[i][0]
                                         draw_y = traj_queue[i][1]
-                                        bbox = (draw_x - 2, draw_y - 2,
-                                                draw_x + 2, draw_y + 2)
+                                        bbox = (
+                                            draw_x - 2,
+                                            draw_y - 2,
+                                            draw_x + 2,
+                                            draw_y + 2,
+                                        )
                                         draw = ImageDraw.Draw(img)
-                                        draw.ellipse(bbox, outline='yellow')
+                                        draw.ellipse(bbox, outline="yellow")
                                         del draw
 
                                 # Convert back to cv2 image and write to output video
-                                frame = cv2.cvtColor(np.array(img),
-                                                     cv2.COLOR_RGB2BGR)
+                                frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
                     video_writer.write(frame)
                     pbar.update(1)

@@ -3,13 +3,9 @@ import os
 
 
 class VideoClip(object):
-    def __init__(self,
-                 video_name,
-                 fps,
-                 total_frames,
-                 frame_width,
-                 frame_height,
-                 save_path="./") -> None:
+    def __init__(
+        self, video_name, fps, total_frames, frame_width, frame_height, save_path="./"
+    ) -> None:
         self.video_name = video_name
         self.save_path = save_path
         self.fps = fps
@@ -66,16 +62,14 @@ class VideoClip(object):
                     return False
 
     def __make_video(self):
-
         # 设置输出视频的名称、编解码器、帧率和视频分辨率
-        video_name = f"{self.video_name}_{self.begin}-{self.end-1}.mp4"
+        video_name = f"{self.video_name}_{self.begin}-{self.end - 1}.mp4"
         full_path = os.path.join(self.save_path, video_name)
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         fps = self.fps
         output_video_format = (self.frame_width, self.frame_height)
 
-        video_writer = cv2.VideoWriter(full_path, fourcc, fps,
-                                       output_video_format)
+        video_writer = cv2.VideoWriter(full_path, fourcc, fps, output_video_format)
 
         # 遍历列表中的每个元素，将元素绘制到图像上，并将图像写入到视频中
         for frame in self.frame_list:

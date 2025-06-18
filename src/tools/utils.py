@@ -1,9 +1,7 @@
 import json
 import os
 import shutil
-import json
 import cv2
-import copy
 import re
 import pandas as pd
 
@@ -24,7 +22,7 @@ def is_file_empty(file_path):
 
 
 def read_json(json_path):
-    with open(json_path, 'r') as f:
+    with open(json_path, "r") as f:
         json_data = json.load(f)
     return json_data
 
@@ -35,36 +33,36 @@ def write_json(data, file_name, save_path="./", mode="r+"):
     full_path = os.path.join(save_path, f"{file_name}.json")
 
     if not os.path.exists(full_path):
-        with open(full_path, 'w') as file:
+        with open(full_path, "w") as file:
             pass
     elif mode == "w":
-        with open(full_path, 'w') as file:
+        with open(full_path, "w") as file:
             json.dump(data, file, indent=4)
         return
 
-    with open(full_path, 'r+') as file:
+    with open(full_path, "r+") as file:
         for key, value in data.items():
             if is_file_empty(full_path):
-                file.write('{}')
+                file.write("{}")
                 file.seek(0, os.SEEK_END)
                 file.seek(file.tell() - 1, os.SEEK_SET)
-                file.write('\n')
+                file.write("\n")
                 file.write(json.dumps(key, indent=4))
-                file.write(': ')
+                file.write(": ")
                 file.write(json.dumps(value, indent=4))
-                file.write('\n')
-                file.write('}')
+                file.write("\n")
+                file.write("}")
                 continue
 
             file.seek(0, os.SEEK_END)
             file.seek(file.tell() - 2, os.SEEK_SET)
-            file.write(',')
-            file.write('\n')
+            file.write(",")
+            file.write("\n")
             file.write(json.dumps(key, indent=4))
-            file.write(': ')
+            file.write(": ")
             file.write(json.dumps(value, indent=4))
-            file.write('\n')
-            file.write('}')
+            file.write("\n")
+            file.write("}")
     return
 
 
@@ -74,9 +72,8 @@ def is_video_detect(defile_name, save_path="res"):
         return False
 
     for root, dirs, files in os.walk(save_path):
-
         for file in files:
-            file_name = file.split('.')[0]
+            file_name = file.split(".")[0]
             if defile_name == file_name:
                 file_path = os.path.join(root, file)
                 print(
@@ -89,15 +86,13 @@ def find_reference(video_name, save_path="references"):
     file_path = None
 
     if not os.path.exists(save_path):
-        print(
-            f"The path {save_path} does not exist! Try to check the save_path! "
-        )
+        print(f"The path {save_path} does not exist! Try to check the save_path! ")
         return None
 
     for root, dirs, files in os.walk(save_path):
         for file in files:
             # file_name = file.split('.')[0].split('_')[0]
-            file_name = file.split('.')[0]
+            file_name = file.split(".")[0]
             if video_name == file_name:
                 file_path = os.path.join(root, file)
                 return file_path
@@ -119,7 +114,15 @@ def find_next(video_path, court_detect, begin_frame):
     skip_frames = int(fps)
 
     def pre_process():
-        nonlocal video, fps, total_frames, skip_frames, court_detect, begin_frame, last_count, court_info_list
+        nonlocal \
+            video, \
+            fps, \
+            total_frames, \
+            skip_frames, \
+            court_detect, \
+            begin_frame, \
+            last_count, \
+            court_info_list
         video.set(cv2.CAP_PROP_POS_FRAMES, begin_frame)
         while True:
             # Read a frame from the video
@@ -144,7 +147,6 @@ def find_next(video_path, court_detect, begin_frame):
     def find_frame(end_frame):
         nonlocal video, court_detect, begin_frame, total_frames
         while begin_frame + 1 < end_frame:
-
             middle_frame = (begin_frame + end_frame) // 2
             video.set(cv2.CAP_PROP_POS_FRAMES, middle_frame)
 
@@ -180,7 +182,7 @@ def clear_file(defile_name, save_path="res"):
                 continue
 
         for file in files:
-            file_name = file.split('.')[0]
+            file_name = file.split(".")[0]
             if defile_name == file_name:
                 file_path = os.path.join(root, file)
                 os.remove(file_path)
@@ -196,10 +198,15 @@ if __name__ == "__main__":
     data2 = {"1": {"top": None, "bottom": None}}
     data3 = {"2": {"top": None, "bottom": None}}
     data4 = {
-        'frame':
-        360,
-        'court': [[671, 471], [1251, 471], [629, 678], [1293, 674], [540, 987],
-                  [1370, 987]]
+        "frame": 360,
+        "court": [
+            [671, 471],
+            [1251, 471],
+            [629, 678],
+            [1293, 674],
+            [540, 987],
+            [1370, 987],
+        ],
     }
 
     # write_json(data1, "demo")
@@ -210,4 +217,4 @@ if __name__ == "__main__":
     import pandas as pd
 
     data = pd.DataFrame(pd.read_json("demo.json"))
-    print(data['frame'])
+    print(data["frame"])
