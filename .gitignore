@@ -55,9 +55,7 @@ poetry.lock                     # Uncomment to ignore poetry.lock (usually commi
 
 
 # Example of ignoring a specific file/folder that's local
-/model/weights/*pth
-/model/weights/*pt
  *.pth
  *.pt
+/testvideos/
 /ShuttleSet/*
-/orivideo/*
