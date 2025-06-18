@@ -1,6 +1,8 @@
 {
-"first_rally_frame": 332,
-"next_rally_frame": 332,
+"first_rally_frame": 332
+,
+"next_rally_frame": 332
+,
 "court_info": [
     [
         667,
@@ -26,7 +28,8 @@
         1371,
         982
     ]
-],
+]
+,
 "net_info": [
     [
         563,

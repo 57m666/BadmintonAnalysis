@@ -487,20 +487,10 @@ class CourtDetect(object):
         r_a = self.__court_info[2]
         r_b = self.__court_info[3]
 
-        ankle_x = 0
-        ankle_y = 0
+        
 
-        if (joint[15][0] == 0):
-            ankle_x = joint[16][0]
-        elif (joint[16][0] == 0):
-            ankle_x = joint[15][0]
-        elif (joint[15][1] == 0):
-            ankle_y = joint[16][1]
-        elif (joint[16][1] == 0):
-            ankle_y = joint[15][1]
-        else:
-            ankle_x = (joint[15][0] + joint[16][0]) / 2
-            ankle_y = (joint[15][1] + joint[16][1]) / 2
+        ankle_x = (joint[15][0] + joint[16][0]) / 2
+        ankle_y = (joint[15][1] + joint[16][1]) / 2
 
         top = ankle_y > self.__extended_court_points[0][1]
         bottom = ankle_y < self.__extended_court_points[5][1]
