@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-
 from torchsummary import summary
 
 
@@ -19,7 +18,7 @@ class Conv(nn.Module):
 
     def forward(self, x):
         return self.bn(self.act(self.conv(x)))  # 和relu-bn-conv不一样？
-        #return self.convs(x)
+        # return self.convs(x)
 
 
 class TrackNet(nn.Module):
@@ -64,8 +63,9 @@ class TrackNet(nn.Module):
 
         self.conv2d_16 = Conv(192, 64)
         self.conv2d_17 = Conv(64, 64)
-        self.conv2d_18 = nn.Conv2d(64, 3, kernel_size=(1, 1),
-                                   padding='same')  # 输出3张图
+        self.conv2d_18 = nn.Conv2d(
+            64, 3, kernel_size=(1, 1), padding="same"
+        )  # 输出3张图
         # self.conv2d_18 = Conv(64, 1, k=(1,1))           输出1张图
 
     def forward(self, x):
@@ -119,7 +119,7 @@ class TrackNet(nn.Module):
     # torch.save                保存模型的权重
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     model = TrackNet()
     print(summary(model, (9, 288, 512), device="cpu"))
-    #print(model)
+    # print(model)

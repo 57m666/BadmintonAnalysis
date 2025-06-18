@@ -1,0 +1,63 @@
+# PyCharm specific files
+.idea/                          # PyCharm project files (contains local settings, run configurations, etc.)
+*.iml                           # IntelliJ IDEA module files
+.vscode/                        # VS Code specific files (if you also use VS Code)
+
+# Python specific files
+__pycache__/                    # Python 2 and 3 byte-code cache
+*.pyc                           # Python 2 compiled bytecode
+*.pyo                           # Python 2 optimized bytecode
+*.pyd                           # Windows-specific Python dynamic-link library
+*.egg                           # Python egg files
+*.egg-info/                     # Python egg information directory
+.Python                         # Python virtual environment folder (sometimes created)
+build/                          # Build directory
+dist/                           # Distribution directory
+.env/                           # Common name for virtual environment directory
+/venv/                          # Common name for virtual environment directory (also used by PyCharm by default)
+/env/                           # Another common virtual environment directory
+/pyvenv.cfg                     # Virtual environment configuration file (inside venv)
+
+# OS generated files
+.DS_Store                       # macOS specific file
+Thumbs.db                       # Windows specific file
+Desktop.ini                     # Windows specific file
+
+# Test and coverage files
+htmlcov/                        # Coverage report directory
+.coverage                       # Coverage data file
+.pytest_cache/                  # pytest cache directory
+.nox/                           # Nox test automation directory
+.tox/                           # Tox test automation directory
+
+# Database files (examples, adjust as needed)
+*.db                            # SQLite database files
+*.sqlite3
+
+# Jupyter Notebook files (if applicable)
+.ipynb_checkpoints              # Jupyter checkpoint files
+
+# MyPy and other static analysis tools
+.mypy_cache/                    # MyPy cache
+.ruff_cache/                    # Ruff cache
+
+# Compiled languages (if you mix with C/C++ extensions)
+*.so                            # Shared object files
+*.dll                           # Dynamic link libraries
+*.dylib                         # macOS dynamic libraries
+
+# Dependency management lock files (consider whether to commit)
+# Pipenv
+Pipfile.lock                    # Uncomment to ignore Pipfile.lock (usually committed)
+
+# Poetry
+poetry.lock                     # Uncomment to ignore poetry.lock (usually committed)
+
+
+# Example of ignoring a specific file/folder that's local
+/model/weights/*pth
+/model/weights/*pt
+ *.pth
+ *.pt
+/ShuttleSet/*
+/orivideo/*

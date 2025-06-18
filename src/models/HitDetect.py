@@ -1,22 +1,52 @@
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-sys.path.append("src/tools")
+import math
+from scipy.signal import find_peaks
+import os
+import pandas as pd
+import random
 
 
 class Pose:
     skeleton = [
-        (0, 1), (0, 2), (1, 3), (2, 4),  # Head
-        (5, 6), (5, 7), (7, 9), (6, 8), (8, 10),
-        (6, 12), (5, 11), (11, 12),  # Body
-        (11, 13), (12, 14), (13, 15), (14, 16)
+        (0, 1),
+        (0, 2),
+        (1, 3),
+        (2, 4),  # Head
+        (5, 6),
+        (5, 7),
+        (7, 9),
+        (6, 8),
+        (8, 10),
+        (6, 12),
+        (5, 11),
+        (11, 12),  # Body
+        (11, 13),
+        (12, 14),
+        (13, 15),
+        (14, 16),
     ]
 
     joint_names = [
-        "nose", "left_eye", "right_eye", "left_ear", "right_ear",
-        "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
-        "left_wrist", "right_wrist", "left_hip", "right_hip",
-        "left_knee", "right_knee", "left_ankle", "right_ankle" ]
+        "nose",
+        "left_eye",
+        "right_eye",
+        "left_ear",
+        "right_ear",
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_wrist",
+        "right_wrist",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle",
+    ]
 
     def __init__(self, kplines=[], fullPose=False):
         if not kplines:
@@ -53,7 +83,6 @@ class Pose:
         self.bx = [min(self.kp[:, 0]), max(self.kp[:, 0])]
         self.by = [min(self.kp[:, 1]), max(self.kp[:, 1])]
 
-
     def draw_skeleton(self, img, colour=(0, 128, 0), thickness=5):
         cimg = img.copy()
         for line in self.skeleton:
@@ -84,7 +113,7 @@ class Pose:
             return self.kp[15]
         elif left_nan and right_nan:
             return self.get_centroid()
-        return (self.kp[15] + self.kp[16]) / 2.
+        return (self.kp[15] + self.kp[16]) / 2.0
 
     def get_centroid(self):
         n = 0
@@ -100,8 +129,11 @@ class Pose:
     def can_reach(self, p, epsx=1.5, epsy=1.5):
         # if within (1+/-eps) of the bounding box then we can reach it
         dx, dy = self.bx[1] - self.bx[0], self.by[1] - self.by[0]
-        return self.bx[0] - epsx * dx < p[0] < self.bx[1] + epsx * dx and \
-               self.by[0] - epsy * dy < p[1] < self.by[1] + epsy * dy
+        return (
+            self.bx[0] - epsx * dx < p[0] < self.bx[1] + epsx * dx
+            and self.by[0] - epsy * dy < p[1] < self.by[1] + epsy * dy
+        )
+
 
 class HitDetector(object):
     def __init__(self, court, poses, trajectory):
@@ -116,6 +148,7 @@ class HitDetector(object):
     def detect_hits(self):
         pass
 
+
 class AdhocHitDetector(HitDetector):
     def __init__(self, poses, trajectory):
         super().__init__(None, poses, trajectory)
@@ -126,13 +159,13 @@ class AdhocHitDetector(HitDetector):
         # The slope is averaged by the window parameter to remove noise
         z = np.array(z)
         bpts = []
-        for i in range(window+1, len(z)-window-1):
-            if (z[i]-z[i-1]) * (z[i]-z[i+1]) < 0:
+        for i in range(window + 1, len(z) - window - 1):
+            if (z[i] - z[i - 1]) * (z[i] - z[i + 1]) < 0:
                 continue
 
             # This is a local opt
-            left = abs(np.median(z[i-window+1:i+1] - z[i-window:i]))
-            right = abs(np.median(z[i+1:i+window+1] - z[i:i+window]))
+            left = abs(np.median(z[i - window + 1 : i + 1] - z[i - window : i]))
+            right = abs(np.median(z[i + 1 : i + window + 1] - z[i : i + window]))
             if max(left, right) > thresh:
                 bpts.append(i)
         return bpts
@@ -148,7 +181,7 @@ class AdhocHitDetector(HitDetector):
         return self._merge_hits(
             self._detect_hits_1d(x, thresh, window),
             self._detect_hits_1d(y, thresh, window),
-            closeness
+            closeness,
         )
 
     def detect_hits(self, fps=25):
@@ -161,7 +194,7 @@ class AdhocHitDetector(HitDetector):
         # Filter hits by velocity
         avg_hit = np.average(np.diff(result))
         for i, fid in enumerate(result):
-            if i+1 < len(result) and result[i+1] - fid > 1.6 * avg_hit:
+            if i + 1 < len(result) and result[i + 1] - fid > 1.6 * avg_hit:
                 is_hit.append(0)
                 continue
 
@@ -185,13 +218,13 @@ class AdhocHitDetector(HitDetector):
                 last_hit = reached_by
             is_hit.append(reached_by)
 
-        print('Total shots hit by players:', sum(x > 0 for x in is_hit))
-        print('Total impacts detected:', len(result))
-        print('Distribution of shot times:')
+        print("Total shots hit by players:", sum(x > 0 for x in is_hit))
+        print("Total impacts detected:", len(result))
+        print("Distribution of shot times:")
         plt.hist(np.diff(result))
-        print('Average time between shots (s):', np.average(np.diff(result)) / fps)
+        print("Average time between shots (s):", np.average(np.diff(result)) / fps)
         return result, is_hit
-    
+
 
 # def scale_data(x):
 #     x = np.array(x)
@@ -409,21 +442,8 @@ class AdhocHitDetector(HitDetector):
 #             print('Average time between shots (s):', np.average(np.diff(result)) / self.fps)
 #         return result, is_hit
 
+
 def event_detect(df):
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import scipy.ndimage
-    from scipy.optimize import curve_fit
-    import csv
-    from mpl_toolkits.mplot3d import Axes3D
-    import math
-    from scipy.signal import find_peaks
-    import argparse
-    import os
-    import sys
-
-
     def angle(v1, v2):
         dx1 = v1[2] - v1[0]
         dy1 = v1[3] - v1[1]
@@ -441,7 +461,6 @@ def event_detect(df):
                 included_angle = 360 - included_angle
         return included_angle
 
-
     def get_point_line_distance(point, line):
         point_x = point[0]
         point_y = point[1]
@@ -453,14 +472,13 @@ def event_detect(df):
             return math.fabs(point_x - line_s_x)
         if line_e_y - line_s_y == 0:
             return math.fabs(point_y - line_s_y)
-        #斜率
+        # 斜率
         k = (line_e_y - line_s_y) / (line_e_x - line_s_x)
-        #截距
+        # 截距
         b = line_s_y - k * line_s_x
-        #带入公式得到距离dis
+        # 带入公式得到距离dis
         dis = math.fabs(k * point_x - point_y + b) / math.pow(k * k + 1, 0.5)
         return dis
-
 
     # df=pd.DataFrame()
     list1 = []
@@ -468,11 +486,11 @@ def event_detect(df):
     frames = []
     realx = []
     realy = []
-    count=0
-    num=0
-    start_frame=0
-    for index,row in df.iterrows():
-        list1.append([index,1,row['ball'][0],row['ball'][1]])
+    count = 0
+    num = 0
+    start_frame = 0
+    for index, row in df.iterrows():
+        list1.append([index, 1, row["ball"][0], row["ball"][1]])
     front_zeros = np.zeros(len(list1))
     for i in range(len(list1)):
         frames.append(int(float(list1[i][0])))
@@ -480,8 +498,13 @@ def event_detect(df):
         realy.append(int(float(list1[i][3])))
         if int(float(list1[i][2])) != 0:
             front_zeros[num] = count
-            points.append((int(float(list1[i][2])), int(float(list1[i][3])),
-                           int(float(list1[i][0]))))
+            points.append(
+                (
+                    int(float(list1[i][2])),
+                    int(float(list1[i][3])),
+                    int(float(list1[i][0])),
+                )
+            )
             num += 1
         else:
             count += 1
@@ -504,21 +527,21 @@ def event_detect(df):
     # print curve peaks
     # print(peaks)
 
-    if (len(peaks) >= 5):
-        lower = np.argmin(y[peaks[0]:peaks[1]])
+    if len(peaks) >= 5:
+        lower = np.argmin(y[peaks[0] : peaks[1]])
         if (y[peaks[0]] - lower) < 5:
             peaks = np.delete(peaks, 0)
 
-        lower = np.argmin(y[peaks[-2]:peaks[-1]])
+        lower = np.argmin(y[peaks[-2] : peaks[-1]])
         if (y[peaks[-1]] - lower) < 5:
             peaks = np.delete(peaks, -1)
 
     print()
-    print('Begin : ', end='')
+    print("Begin : ", end="")
     start_point = 0
 
     for i in range(len(y) - 1):
-        if ((y[i] - y[i + 1]) / (z[i + 1] - z[i]) >= 5):
+        if (y[i] - y[i + 1]) / (z[i + 1] - z[i]) >= 5:
             start_point = i + front_zeros[i]
             Predict_hit_points[int(start_point)] = 1
             print(int(start_point) + start_frame)
@@ -526,80 +549,88 @@ def event_detect(df):
 
     end_point = 10000
 
-    print('Predict points : ')
-    plt.plot(z, y * -1, '-')
+    print("Predict points : ")
+    plt.plot(z, y * -1, "-")
     for i in range(len(peaks)):
-        print(peaks[i] + int(front_zeros[peaks[i]] + start_frame), end=',')
-        if (peaks[i] + int(front_zeros[peaks[i]]) >= start_point
-                and peaks[i] + int(front_zeros[peaks[i]]) <= end_point):
+        print(peaks[i] + int(front_zeros[peaks[i]] + start_frame), end=",")
+        if (
+            peaks[i] + int(front_zeros[peaks[i]]) >= start_point
+            and peaks[i] + int(front_zeros[peaks[i]]) <= end_point
+        ):
             Predict_hit_points[peaks[i] + int(front_zeros[peaks[i]])] = 1
 
-    #打擊的特定frame = peaks[i]+int(front_zeros[peaks[i]])
+    # 打擊的特定frame = peaks[i]+int(front_zeros[peaks[i]])
     print()
-    print('Extra points : ')
+    print("Extra points : ")
     for i in range(len(peaks) - 1):
         start = peaks[i]
         end = peaks[i + 1] + 1
         upper = []
-        plt.plot(z[start:end], y[start:end] * -1, '-')
-        lower = np.argmin(y[start:end])  #找到最低谷(也就是從最高點開始下墜到下一個擊球點),以此判斷扣殺或平球軌跡
+        plt.plot(z[start:end], y[start:end] * -1, "-")
+        lower = np.argmin(
+            y[start:end]
+        )  # 找到最低谷(也就是從最高點開始下墜到下一個擊球點),以此判斷扣殺或平球軌跡
         for j in range(start + lower, end + 1):
             if (j - (start + lower) > 5) and (end - j > 5):
                 if (y[j] - y[j - 1]) * 3 < (y[j + 1] - y[j]):
-                    print(j + start_frame, end=',')
+                    print(j + start_frame, end=",")
                     ang[j + int(front_zeros[j])] = 1
 
                 point = [x[j], y[j]]
                 line = [x[j - 1], y[j - 1], x[j + 1], y[j + 1]]
                 # if get_point_line_distance(point,line) > 2.5:
-                if angle([x[j - 1], y[j - 1], x[j], y[j]],
-                         [x[j], y[j], x[j + 1], y[j + 1]]) > 130:
-                    print(j + start_frame, end=',')
+                if (
+                    angle(
+                        [x[j - 1], y[j - 1], x[j], y[j]],
+                        [x[j], y[j], x[j + 1], y[j + 1]],
+                    )
+                    > 130
+                ):
+                    print(j + start_frame, end=",")
                     ang[j + int(front_zeros[j])] = 1
 
     ang, _ = find_peaks(ang, distance=15)
-    #final_predict, _  = find_peaks(Predict_hit_points, distance=10)
+    # final_predict, _  = find_peaks(Predict_hit_points, distance=10)
     for i in ang:
         Predict_hit_points[i] = 1
     Predict_hit_points, _ = find_peaks(Predict_hit_points, distance=5)
     final_predict = []
-    for i in (Predict_hit_points):
+    for i in Predict_hit_points:
         final_predict.append(i)
 
     print()
-    print('Final predict : ')
+    print("Final predict : ")
     for pred in list(final_predict):
         print(pred + start_frame, end=",")
 
     print()
-    if len(list(final_predict))>0:
-        print(f'End : {list(final_predict)[-1]+ start_frame}')
+    if len(list(final_predict)) > 0:
+        print(f"End : {list(final_predict)[-1] + start_frame}")
     else:
         print("End : ")
-    
+
     return final_predict
 
-import pandas as pd
-import os
-import random
 
-special_path="ShuttleSet\ShuttleSet22\data4acreg\He_Bing_Jiao_Chen_Yu_Fei_GWANGJU_YONEX_Korea_Masters_2022_Final/rally_3-18.csv"
+special_path = "ShuttleSet\ShuttleSet22\data4acreg\He_Bing_Jiao_Chen_Yu_Fei_GWANGJU_YONEX_Korea_Masters_2022_Final/rally_3-18.csv"
+
 
 def random_csv_file(folder_path):
     csv_files = []
-    
+
     # 遍历文件夹及其子文件夹，找到所有的CSV文件路径
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             if file.endswith(".csv"):
                 csv_files.append(os.path.join(root, file))
-    
+
     # 随机选择一个CSV文件路径
     if len(csv_files) > 0:
         random_path = random.choice(csv_files)
         return random_path
     else:
         return None
+
 
 # 指定文件夹路径
 folder_path = "ShuttleSet\ShuttleSet22\data4acreg"
@@ -609,37 +640,48 @@ folder_path = "ShuttleSet\ShuttleSet22\data4acreg"
 # 调用函数进行随机抽取
 data_path = random_csv_file(folder_path)
 
+
 # 定义处理函数
 def parse_list(x):
     return eval(x)
 
+
 # 读取CSV文件并转换为DataFrame，同时将 'my_list' 列中的列表解析
-data = pd.read_csv(data_path, converters={"ball": parse_list,"top":parse_list,"bottom":parse_list,"court":parse_list,"net":parse_list})
+data = pd.read_csv(
+    data_path,
+    converters={
+        "ball": parse_list,
+        "top": parse_list,
+        "bottom": parse_list,
+        "court": parse_list,
+        "net": parse_list,
+    },
+)
 
-X=[loca_info[0] for loca_info in data['ball']]
-Y=[loca_info[1] for loca_info in data['ball']]
+X = [loca_info[0] for loca_info in data["ball"]]
+Y = [loca_info[1] for loca_info in data["ball"]]
 
-poses=[data[['top']],data[['bottom']]]
+poses = [data[["top"]], data[["bottom"]]]
 
-trajectory=pd.DataFrame(columns=['X','Y'])
-trajectory.X=X
-trajectory.Y=Y
+trajectory = pd.DataFrame(columns=["X", "Y"])
+trajectory.X = X
+trajectory.Y = Y
 
-court=data.loc[0,'court']
-net=data.loc[0,'net']
+court = data.loc[0, "court"]
+net = data.loc[0, "net"]
 
-begin_frame=data.loc[0,'frame']
+begin_frame = data.loc[0, "frame"]
 
-detect1=AdhocHitDetector(poses,trajectory)
+detect1 = AdhocHitDetector(poses, trajectory)
 
-hit_true=[]
-for index,row in data.iterrows():
-    if str(row['type']) != "nan":
+hit_true = []
+for index, row in data.iterrows():
+    if str(row["type"]) != "nan":
         hit_true.append(index)
 
-result, is_hit=detect1.detect_hits()
+result, is_hit = detect1.detect_hits()
 print(data_path)
-y_pred0=event_detect(data)
+y_pred0 = event_detect(data)
 
 print(f"y_pred0={y_pred0}")
 print(f"y_pred1={result}")
