@@ -6,7 +6,7 @@
 
 简单的羽毛球运动员姿态、场地检测工具，作为期末课程项目
 
-[动态比赛示意图](docs/imgs/onlyPoints_test6_20250619_011408.gif)
+![动态比赛示意图](docs/imgs/onlyPoints_test6_20250619_011408.gif)
 
 ## 功能特性
 
