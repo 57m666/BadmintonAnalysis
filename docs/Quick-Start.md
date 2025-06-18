@@ -1,4 +1,3 @@
-
 You can download weights in <https://drive.google.com/drive/folders/16mVjXrul3VaXKfHHYauY0QI-SG-JVLvL?usp=sharing>
 
 add the weight folder to the "src/model"

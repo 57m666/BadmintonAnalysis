@@ -47,8 +47,8 @@ htmlcov/                        # Coverage report directory
 *.dll                           # Dynamic link libraries
 *.dylib                         # macOS dynamic libraries
 
-# Example of ignoring a specific file/folder that's local
+# Project Custom ingore
+src/models/weights/*
+ShuttleSet/*
 *.pth
 *.pt
-testvideos/
-ShuttleSet/
