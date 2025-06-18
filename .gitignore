@@ -4,7 +4,7 @@
 .vscode/                        # VS Code specific files (if you also use VS Code)
 
 # Python specific files
-__pycache__/                    # Python 2 and 3 byte-code cache
+__pycache__/*                   # Python 2 and 3 byte-code cache
 *.pyc                           # Python 2 compiled bytecode
 *.pyo                           # Python 2 optimized bytecode
 *.pyd                           # Windows-specific Python dynamic-link library

@@ -639,6 +639,11 @@ class CourtDetect(object):
         """
         check if player is in court
         """
+        if len(joint) < 17:  # 或者更具体地，if len(joint) == 0
+            # 如果关键点完全缺失或数量不足（少于17个），
+            # 那么无法根据脚踝位置判断此“人物”是否在场内。
+            return False
+
         l_a = self.__court_info[0]
         l_b = self.__court_info[1]
         r_a = self.__court_info[2]
