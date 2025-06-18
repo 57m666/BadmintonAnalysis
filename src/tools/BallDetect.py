@@ -1,5 +1,3 @@
-import time
-
 import torch
 import torchvision
 from tqdm import tqdm
@@ -8,26 +6,14 @@ import sys
 import cv2
 import numpy as np
 from pathlib import Path
-from argparse import ArgumentParser
 
-sys.path.append("src/models")
-sys.path.append("src/tools")
-
-from TrackNet import TrackNet
 from ultralytics import YOLO
-import pandas as pd
-import pickle
 import json
-from utils import extract_numbers, write_json, read_json
-
-# from src.tools.utils import extract_numbers, write_json, read_json
-from denoise import smooth
-from event_detection import event_detect
 import logging
 import traceback
 
 from ..models.TrackNet import TrackNet
-from .utils import extract_numbers, write_json, read_json
+from .utils import extract_numbers, read_json
 from .denoise import smooth
 
 
@@ -45,7 +31,7 @@ def ball_detect(video_path, result_path):
 
     orivi_name, start_frame = extract_numbers(video_name)
 
-    cd_save_dir = os.path.join(f"{result_path}/courts", f"court_kp")
+    cd_save_dir = os.path.join(f"{result_path}/courts", "court_kp")
     cd_json_path = f"{cd_save_dir}/{orivi_name}.json"
     court = read_json(cd_json_path)["court_info"]
 

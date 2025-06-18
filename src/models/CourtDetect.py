@@ -23,10 +23,6 @@ def _get_optimal_device():
         return "cpu"
 
 
-from utils import read_json
-
-
-# from src.tools.utils import read_json
 class CourtDetect(object):
     """
     Tasks involving Keypoint RCNNs

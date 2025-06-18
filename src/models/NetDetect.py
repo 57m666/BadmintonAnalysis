@@ -24,10 +24,6 @@ def _get_optimal_device():
         return "cpu"
 
 
-from utils import read_json
-
-
-# from src.tools.utils import read_json
 class NetDetect(object):
     """
     Tasks involving Keypoint RCNNs
