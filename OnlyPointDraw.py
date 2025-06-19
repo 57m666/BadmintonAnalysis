@@ -145,7 +145,7 @@ def draw_frame(frame_id, players_dict, ball_dict, court_dict, video_size):
         ball = ball_dict.get(str(frame_id), None)
         # Only draw ball data if it exists and is visible (assuming 'visible' key in ball_dict)
         if ball and ball.get("visible", 0) == 1:
-            ax.scatter(ball["x"], ball["y"], c="g")
+            ax.scatter(ball["x"], ball["y"], c="g", s=200)
             ax.annotate(
                 "ball",
                 (ball["x"], ball["y"]),
